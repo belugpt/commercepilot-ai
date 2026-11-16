@@ -20,6 +20,12 @@ Product body: title, sku, price_minor (nonnegative integer), currency (uppercase
 
 ## Agent routes (0.2)
 
+## WhatsApp routes (0.3)
+
+GET /webhooks/whatsapp handles subscription verification; POST on the same path verifies the raw-body signature and persists intake without running the agent. GET /v1/whatsapp/{bindings|inbox|outbox|conflicts} requires owner access. POST /v1/whatsapp/bindings/{id}/revoke disables a sender; POST /v1/whatsapp/inbox/{id}/retry requeues eligible reviewed dead letters. See WHATSAPP.md for status semantics, limits, configuration and the separate worker command. No outbound send endpoint is exposed.
+
+### Agent operations
+
 All require owner access. POST /v1/conversations creates a tenant-bound conversation. POST /v1/conversations/{id}/messages accepts `{message}` plus Idempotency-Key and returns a persisted agent run. GET on the same messages path returns up to 200 messages. GET /v1/agent/runs lists up to 100 recent runs, GET /v1/agent/runs/{id} reads one, and POST /v1/agent/runs/{id}/cancel fails an abandoned planning run without executing its tool. Current processing is synchronous. See AI_AGENT_SPECIFICATION.md for grants, capabilities, modes and recovery limits.
 
 Production registration/OIDC, key rotation API, collection pagination, webhook ingestion, scheduling and worker endpoints are pending. API docs are not an assertion of full MVP completion.

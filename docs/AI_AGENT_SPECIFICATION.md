@@ -36,7 +36,7 @@ Business profiles, conversations, user/assistant messages, runs and expenses use
 
 Run states: planning, completed, clarification, blocked, failed. A process crash before commit leaves planning with no local tool effects. Inspect GET /v1/agent/runs and cancel abandoned planning runs using POST /v1/agent/runs/{id}/cancel. A late planner rechecks state and cannot execute after cancellation. Cancellation cannot reverse an already committed action or undo provider token usage. New intent uses a new idempotency key.
 
-Planning and local execution are synchronous in this development API; background queues and WhatsApp webhook handling are pending. This is one tool per turn, not autonomous multi-step chaining. External task execution remains in the separate backend task subsystem.
+Planning and local execution remain synchronous for direct agent API calls. Version 0.3 additionally routes signed WhatsApp text through a durable inbox and a separate leased worker; see WHATSAPP.md. This is one tool per turn, not autonomous multi-step chaining. External task execution remains in the separate backend task subsystem. Background social scheduling and live WhatsApp sending are pending.
 
 ## Integrity and limits
 

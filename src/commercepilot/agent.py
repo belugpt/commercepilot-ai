@@ -80,7 +80,7 @@ class Agent:
                                         {"message": "Planning cancelled; no local action executed.", "reason": "cancelled_by_owner"})
         return self.get_run(merchant, run_id)
 
-    def turn(self, merchant, conversation, key, message):
+    def turn(self, merchant, conversation, key, message, execution_guard=None):
         run_id = str(uuid4())
         # Reserve before planning: duplicate deliveries never spend model tokens twice.
         with self.db.connect() as c:
@@ -117,7 +117,9 @@ class Agent:
                 if state_row["state"] != "planning":
                     return self.get_run(merchant, run_id)
                 c.execute("UPDATE agent_runs SET tool=?,arguments=? WHERE merchant_id=? AND id=?", (tool, args.model_dump_json(), merchant, run_id))
-                if tool == "clarify":
+                if execution_guard is not None and not execution_guard(c):
+                    state, result = "blocked", {"message": "The channel authorization or worker lease is no longer valid; no action was executed.", "reason": "channel_authorization_revoked"}
+                elif tool == "clarify":
                     state, result = "clarification", {"message": args.question}
                 else:
                     policy_row = c.execute("SELECT version,body FROM policies WHERE merchant_id=?", (merchant,)).fetchone()

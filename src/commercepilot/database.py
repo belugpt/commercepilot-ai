@@ -36,9 +36,10 @@ class Database:
         self.path = path
         with self.connect() as conn:
             conn.executescript(SCHEMA)
-            if not conn.execute("SELECT 1 FROM schema_versions WHERE version=2").fetchone():
-                migration = files("commercepilot").joinpath("sql/002_agent.sql").read_text(encoding="utf-8")
-                conn.executescript("BEGIN IMMEDIATE;\n" + migration + "\nCOMMIT;")
+            for version, filename in [(2, "002_agent.sql"), (3, "003_whatsapp.sql")]:
+                if not conn.execute("SELECT 1 FROM schema_versions WHERE version=?", (version,)).fetchone():
+                    migration = files("commercepilot").joinpath("sql/" + filename).read_text(encoding="utf-8")
+                    conn.executescript("BEGIN IMMEDIATE;\n" + migration + "\nCOMMIT;")
 
     @contextmanager
     def connect(self):

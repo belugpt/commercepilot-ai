@@ -34,6 +34,8 @@ Publishing, syncing, refunds and deletion are deliberately blocked until their r
 
 ## Build on it
 
+Version 0.3 adds [signed WhatsApp text intake and a durable worker](docs/WHATSAPP.md), explicit merchant sender bindings, leased claims/recovery, duplicate/conflict handling, dead letters and reply drafts. Live Meta access is unverified and outgoing messages remain disabled. Try `python examples/whatsapp_inbox.py` after installation for a network-free signed-intake demonstration.
+
 Version 0.2 adds persistent agent conversations, merchant profiles/capabilities, validated policy-checked tools, expense provenance and optional Responses API planning. Start with [Try the agent](docs/TRY_THE_AGENT.md) and [the agent specification](docs/AI_AGENT_SPECIFICATION.md). Offline command mode works without accounts; live model planning is opt-in and not yet account-tested.
 
 Read [architecture](docs/ARCHITECTURE.md), [extension guide](docs/EXTENDING.md), [API guide](docs/API.md), [database design](docs/DATABASE.md), [integration evidence](docs/INTEGRATIONS.md), [roadmap](docs/ROADMAP.md), [status](IMPLEMENTATION_STATUS.md), [contribution guide](CONTRIBUTING.md) and [security](SECURITY.md). The original [master specification](docs/MASTER_PRODUCT_SPECIFICATION.md) remains authoritative.

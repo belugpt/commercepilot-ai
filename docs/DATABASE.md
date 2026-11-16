@@ -2,6 +2,8 @@
 
 Local schema version 1 lives in database.py and is snapshotted in migrations/001_initial.sql. Migration 002 adds business_profiles, conversations, agent_runs, messages and expenses. The bundled SQL resource is applied transactionally once, tracked by schema_versions; upgrade tests preserve version-1 merchants and verify repeat startup. SQLite foreign keys are enabled per connection; transactions roll back on failure. Keep migrations/002_agent.sql and the packaged src/commercepilot/sql/002_agent.sql synchronized.
 
+Migration 003 adds whatsapp_bindings, whatsapp_inbox, whatsapp_conflicts and draft-only whatsapp_outbox. Composite tenant foreign keys bind channel, conversation, inbox and run relationships. Provider IDs are unique within WABA/phone scope. Queue fields track readiness, attempts, claim token/expiry, safe failure reason and linked run; claim/query operations use transactions and indexes. Message/conflict payloads never silently overwrite the first record. Keep each migration snapshot synchronized with its packaged SQL resource.
+
 Tables: merchants; api_keys (SHA-256 digest of high-entropy random key, tenant, role, revoked); products (tenant, SKU, validated JSON); policies (tenant, version, JSON); tasks (tenant/key uniqueness, payload hash, validated command, constrained state, evidence, UTC timestamp); audit (tenant/event/object/time); exceptions (composite tenant/task foreign key).
 
 Products and tasks carry composite tenant/object uniqueness. Queries filter on authenticated merchant. No global object read API exists. Tenant-scoped repository tests cover leakage. Local SQLite is a development store, without production row security, encryption, retention, leased jobs or distributed scaling guarantees.

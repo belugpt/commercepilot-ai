@@ -12,11 +12,41 @@ def main():
     create = commands.add_parser("create-merchant")
     create.add_argument("name")
     commands.add_parser("revoke-key")
+    bind = commands.add_parser("whatsapp-bind", help="Bind an operator-verified merchant sender")
+    bind.add_argument("merchant_id")
+    bind.add_argument("waba_id")
+    bind.add_argument("phone_number_id")
+    bind.add_argument("sender_key", help="phone:<digits> or bsuid:<id>")
+    work = commands.add_parser("whatsapp-work", help="Process durable inbox; no WhatsApp sends")
+    work.add_argument("--once", action="store_true")
     args = parser.parse_args()
     db = Database(args.db)
     if args.command == "create-merchant":
         merchant, token = Services(db).provision(args.name)
         print(f"Merchant: {merchant}\nBearer key (shown once): {token}")
+    elif args.command in {"whatsapp-bind", "whatsapp-work"}:
+        import json
+        import time
+        from commercepilot.agent import Agent
+        from commercepilot.planners import CommandPlanner, configured_planner
+        from commercepilot.whatsapp import WhatsApp
+        services = Services(db)
+        planner = CommandPlanner() if args.command == "whatsapp-bind" else configured_planner()
+        whatsapp = WhatsApp(services, Agent(services, planner))
+        if args.command == "whatsapp-bind":
+            print(json.dumps(whatsapp.bind(args.merchant_id, args.waba_id, args.phone_number_id, args.sender_key)))
+        else:
+            try:
+                while True:
+                    result = whatsapp.process_one()
+                    if result:
+                        print(json.dumps(result), flush=True)
+                    if args.once:
+                        break
+                    if result is None:
+                        time.sleep(1)
+            except KeyboardInterrupt:
+                pass
     else:
         import getpass
         token = getpass.getpass("Key to revoke: ")

@@ -6,8 +6,10 @@ Use a modular monolith first: a versioned FastAPI interface, typed Pydantic comm
 
 ```mermaid
 flowchart LR
-    WA[WhatsApp adapter: planned] --> API[Versioned API]
-    WEB[Dashboard: planned] --> API
+    WA[WhatsApp signed webhook] --> INBOX[Durable inbox]
+    INBOX --> WORKER[Leased worker]
+    WORKER --> APP[Application services]
+    WEB[Dashboard: planned] --> API[Versioned API]
     API --> ID[Identity and role checks]
     ID --> APP[Application services]
     AI[Planner extension] --> VALID[Strict commands]
@@ -35,6 +37,9 @@ flowchart LR
 | agent | Persistent message/run lifecycle and atomic local tool orchestration |
 | agent_schema | Strict allowlisted profile/catalogue/expense/report tool inputs |
 | planners | Explicit offline commands and optional model function-call selection |
+| whatsapp | Signed webhook intake, identity binding, durable inbox/worker and draft replies |
+
+Version 0.3 moves WhatsApp text processing outside HTTP intake into a CLI worker. Migration 003 adds tenant-scoped bindings, inbox, conflict records and draft-only outbox. Lease fencing and the agent's execution guard prevent expired/revoked channel execution; inbox/agent idempotency prevents repeated committed local effects after crash recovery. Production PostgreSQL workers and outbound delivery are still separate gates.
 
 Version 0.2 implements merchant context, profile/capability storage, conversations/messages, source-linked expenses and one-tool agent turns. Model planning runs outside the transaction; execution rechecks current policy, capability and cancellation state inside the transaction. See AI_AGENT_SPECIFICATION.md for implemented behavior and limits.
 

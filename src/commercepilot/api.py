@@ -1,7 +1,8 @@
 """Versioned API; bearer keys resolve tenants server-side."""
 import os
-from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Query
+from fastapi.responses import JSONResponse, PlainTextResponse
+from starlette.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from commercepilot.database import Database
 from commercepilot.domain import FinancialInput, PolicyInput, ProductInput, TaskInput, financial_report
@@ -10,14 +11,19 @@ from commercepilot.services import Conflict, Missing, Services
 from commercepilot.agent import Agent
 from commercepilot.agent_schema import MessageInput
 from commercepilot.planners import configured_planner
+from commercepilot.whatsapp import WhatsApp, WebhookError, MAX_BODY_BYTES
 
 
-def create_app(db_path: str | None = None, adapters=None, planner=None) -> FastAPI:
+def create_app(db_path: str | None = None, adapters=None, planner=None,
+               whatsapp_secret=None, whatsapp_verify_token=None, clock=None) -> FastAPI:
     service = Services(Database(db_path or os.getenv("COMMERCEPILOT_DB", "commercepilot.db")), adapters)
-    app = FastAPI(title="CommercePilot AI", version="0.2.0")
+    app = FastAPI(title="CommercePilot AI", version="0.3.0")
     app.state.services = service
     agent = Agent(service, planner if planner is not None else configured_planner())
     app.state.agent = agent
+    whatsapp = WhatsApp(service, agent, whatsapp_secret or os.getenv("WHATSAPP_APP_SECRET"),
+                        whatsapp_verify_token or os.getenv("WHATSAPP_VERIFY_TOKEN"), clock)
+    app.state.whatsapp = whatsapp
     security = HTTPBearer(auto_error=False)
 
     def identity(credentials: HTTPAuthorizationCredentials | None = Depends(security)):
@@ -39,9 +45,28 @@ def create_app(db_path: str | None = None, adapters=None, planner=None) -> FastA
     async def conflict_handler(request, exc):
         return JSONResponse(status_code=409, content={"detail": str(exc)})
 
+    @app.exception_handler(WebhookError)
+    async def webhook_error_handler(request, exc):
+        return JSONResponse(status_code=exc.status, content={"detail": exc.code})
+
+    @app.get("/webhooks/whatsapp", tags=["whatsapp"])
+    def verify_whatsapp(hub_mode: str | None = Query(default=None, alias="hub.mode"),
+                        hub_token: str | None = Query(default=None, alias="hub.verify_token"),
+                        hub_challenge: str | None = Query(default=None, alias="hub.challenge")):
+        return PlainTextResponse(whatsapp.verify_subscription(hub_mode, hub_token, hub_challenge))
+
+    @app.post("/webhooks/whatsapp", tags=["whatsapp"])
+    async def receive_whatsapp(request: Request, x_hub_signature_256: str | None = Header(default=None)):
+        raw = bytearray()
+        async for chunk in request.stream():
+            if len(raw) + len(chunk) > MAX_BODY_BYTES:
+                raise WebhookError(413, "payload_too_large")
+            raw.extend(chunk)
+        return await run_in_threadpool(whatsapp.ingest, bytes(raw), x_hub_signature_256)
+
     @app.get("/health", tags=["operations"])
     def health():
-        return {"status": "ok", "version": "0.2.0"}
+        return {"status": "ok", "version": "0.3.0"}
 
     @app.post("/v1/products", status_code=201, tags=["catalogue"])
     def create_product(data: ProductInput, user=Depends(owner)):
@@ -113,5 +138,19 @@ def create_app(db_path: str | None = None, adapters=None, planner=None) -> FastA
     @app.post("/v1/agent/runs/{run_id}/cancel", tags=["agent"])
     def cancel_agent_run(run_id: str, user=Depends(owner)):
         return agent.cancel(user["merchant_id"], run_id)
+
+    @app.get("/v1/whatsapp/{collection}", tags=["whatsapp"])
+    def whatsapp_records(collection: str, user=Depends(owner)):
+        if collection not in {"bindings", "inbox", "outbox", "conflicts"}:
+            raise HTTPException(404, "collection not found")
+        return whatsapp.list_records(user["merchant_id"], collection)
+
+    @app.post("/v1/whatsapp/bindings/{binding_id}/revoke", tags=["whatsapp"])
+    def revoke_whatsapp(binding_id: str, user=Depends(owner)):
+        return whatsapp.revoke(user["merchant_id"], binding_id)
+
+    @app.post("/v1/whatsapp/inbox/{inbox_id}/retry", tags=["whatsapp"])
+    def retry_whatsapp(inbox_id: str, user=Depends(owner)):
+        return whatsapp.requeue(user["merchant_id"], inbox_id)
 
     return app

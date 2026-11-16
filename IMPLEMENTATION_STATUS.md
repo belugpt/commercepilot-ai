@@ -1,5 +1,13 @@
 # Implementation status
 
+## 0.3 — WhatsApp intake and worker, 2026-11-16
+
+Implemented signed webhook verification/intake, raw-body and batch limits, explicit operator-attested WABA/number/sender mapping, phone and business-scoped sender IDs, persistent conversations, transactional inbox/replay dedup/conflict records, leased worker with conversation ordering, bounded retries/dead letters, owner recovery/revocation/inspection and draft-only reply outbox. Agent execution rechecks channel binding and worker lease. Migration 003 upgrades existing databases. CLI and signed offline demonstration are documented in docs/WHATSAPP.md.
+
+Verification: 51 tests passed locally on Python 3.15, including signed intake/limits/atomic batches, phone/BSUID tenant routing, revocation during planning, dedup/conflicts, concurrent claims, ordering, lease fencing, crash recovery and bounded retry/dead-letter recovery. The signed offline example and CLI command discovery also passed. No live Meta account, credentials, outbound sends or delivery verification exist. Sender ownership is operator-attested, not provider/OAuth-verified. CI will be checked after publication; one upstream Starlette/httpx warning remains.
+
+Remaining: live account validation, outbound transport/templates/windows/consent and delivery receipts, sender reactivation, media processing, production infrastructure, provider adapters and the remaining MVP. Next milestone: outbound delivery contract and status reconciliation after confirming account/API access; media ingestion can progress independently.
+
 ## 0.2 — agent runtime, 2026-11-16
 
 Implemented persistent tenant conversations/messages/runs; business profiles and capabilities; strict tool schemas; default offline command planner and optional OpenAI Responses function-call planner; atomic local execution/result/audit; source-linked merchant-reported expense records; factual caption drafts; exact supplied-aggregate report tool; idempotent delivery; cancellation of abandoned planning with late-execution prevention. Migration 002 upgrades the foundation schema without losing existing merchants. Agent API and local demonstration are documented.
