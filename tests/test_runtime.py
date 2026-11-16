@@ -40,6 +40,7 @@ def test_reports_render_unknowns_and_exact_large_money():
     assert 'NGN 999,999,999,999,999.99' in reply
     assert 'Gross profit: Unknown' in reply
     assert 'Missing: cogs' in reply
+    assert 'No products yet' in WhatsApp.render_reply({'result':{'message':'Catalogue records retrieved.','products':[]}})
 
 
 @pytest.mark.skipif(os.name != 'nt',reason='Windows user-scoped DPAPI')

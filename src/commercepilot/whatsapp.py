@@ -302,8 +302,8 @@ class WhatsApp:
             text += "\n\n" + result["caption"]
         elif result.get("product"):
             text += "\n" + result["product"]["title"] + " (" + result["product"]["sku"] + ")"
-        elif result.get("products"):
-            text += "\n" + "\n".join(p["title"] + " (" + p["sku"] + ")" for p in result["products"][:20])
+        elif "products" in result:
+            text += "\n" + ("\n".join(p["title"] + " (" + p["sku"] + ")" for p in result["products"][:20]) or "No products yet. Use /add Product title | SKU | NGN 5000.00 with your actual product details.")
         elif result.get("report"):
             report = result["report"]
             def amount(value):
