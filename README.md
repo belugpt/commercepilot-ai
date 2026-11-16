@@ -2,7 +2,7 @@
 
 An MIT-licensed backend for WhatsApp-first merchant operations. Built for developers to extend through typed integration and planner contracts.
 
-**Status: working backend foundation; full MVP and production deployment are still in development.** No WhatsApp, Shopify, Meta, Bumpa or AI credentials are bundled. No external connector is enabled.
+**Status: working local merchant workspace with live-validated WhatsApp text intake/replies on the owner's test account; full MVP and production infrastructure remain incomplete.** No credentials are bundled. New installations keep provider access disabled until configured.
 
 ## Run locally
 
@@ -33,6 +33,8 @@ The CLI prints a bearer key once. Open http://127.0.0.1:8000/ and connect the me
 Publishing, syncing, refunds and deletion are deliberately blocked until their required approval/rule implementations exist. The default application contains no executing adapter. Successful test adapters are fixtures only.
 
 ## Build on it
+
+Version 0.5 adds [the integrated runtime and operations guide](docs/OPERATIONS.md): a private dashboard, isolated public-webhook listener, automatic reply drain, Windows-encrypted local settings, source-linked WhatsApp attachment quarantine, statistical sales forecasts/backtesting, plan variance and easier account-free commands. Live test-account text receive → worker → automatic reply → signed delivered callback was verified. The owner's local runtime is separate from this credential-free public repository. See [the completion matrix](docs/REQUIREMENTS_MATRIX.md) for remaining full-spec gates.
 
 Version 0.4 adds a [merchant dashboard and business ledger](docs/BUSINESS_WORKSPACE.md): revisioned order/expense imports, timezone-aware daily reports, completeness gates, budget drafts and exact-plan approval, quarantined uploads and opt-in WhatsApp text delivery with signed status reconciliation. Sending remains disabled by default and has not been live-account verified. For a temporary sample dashboard run `python examples/dashboard_demo.py` and use the key printed by the demo at http://127.0.0.1:8001.
 

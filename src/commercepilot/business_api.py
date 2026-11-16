@@ -7,11 +7,27 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, Response
 from commercepilot.business import Business, OrderInput, FinancialRecordInput, CoverageInput, PlanInput, ApprovePlanInput
 from commercepilot.services import now
+from commercepilot.analytics import Analytics, ForecastInput
 
 
 def business_router(services, owner, identity):
     router = APIRouter()
     business = Business(services)
+    analytics = Analytics(services)
+
+    @router.post("/v1/forecasts", tags=["planning"])
+    def forecast(data: ForecastInput, user=Depends(identity)):
+        try:
+            return analytics.forecast(user["merchant_id"], data)
+        except ValueError as e:
+            raise HTTPException(422, str(e)) from e
+
+    @router.get("/v1/plans/{plan_id}/variance", tags=["planning"])
+    def plan_variance(plan_id: str, user=Depends(identity)):
+        try:
+            return analytics.variance(user["merchant_id"], plan_id)
+        except ValueError as e:
+            raise HTTPException(422, str(e)) from e
 
     @router.get("/", response_class=HTMLResponse, include_in_schema=False)
     def dashboard():

@@ -60,6 +60,31 @@ class Delivery:
         with self.db.connect() as c:
             return [dict(r) for r in c.execute("SELECT outbox_id,state,provider_message_id,reason,created_at,updated_at FROM whatsapp_deliveries WHERE merchant_id=? ORDER BY created_at DESC LIMIT 100", (merchant,))]
 
+    def process_one(self):
+        """Drain one eligible draft; repeated polling cannot replay a submission."""
+        if self.sender is None:
+            return None
+        with self.db.connect() as c:
+            rows = c.execute("""SELECT o.id,o.merchant_id,b.sender_key,i.body AS inbound_body,p.body AS policy_body
+                FROM whatsapp_outbox o JOIN whatsapp_inbox i ON i.id=o.inbox_id
+                JOIN whatsapp_bindings b ON b.id=i.binding_id
+                JOIN policies p ON p.merchant_id=o.merchant_id
+                WHERE b.enabled=1 AND i.phone_number_id=?
+                AND NOT EXISTS(SELECT 1 FROM whatsapp_deliveries d WHERE d.outbox_id=o.id)
+                ORDER BY i.seq LIMIT 1000""", (self.sender.phone_number_id,)).fetchall()
+        for row in rows:
+            if authorize(Action.REPLY, PolicyInput.model_validate_json(row["policy_body"])):
+                continue
+            timestamp = int(json.loads(row["inbound_body"])["timestamp"])
+            if not row["sender_key"].startswith("phone:") or not 0 <= self.clock()-timestamp < 86400:
+                continue
+            try:
+                return self.send(row["merchant_id"], row["id"])
+            except (Conflict, Missing):
+                # Permission/binding changes after selection are expected.
+                continue
+        return None
+
     @staticmethod
     def reconcile(c, provider_id):
         delivery = c.execute("SELECT * FROM whatsapp_deliveries WHERE provider_message_id=?", (provider_id,)).fetchone()

@@ -14,6 +14,7 @@ class Action(StrEnum):
     CALCULATE = "economics.calculate"
     SALES_REPORT = "sales.report.daily"
     REPLY = "whatsapp.reply.send"
+    MEDIA = "media.capture"
     DESCRIBE = "content.describe"
     PUBLISH = "social.publish"
     SYNC = "catalogue.sync"

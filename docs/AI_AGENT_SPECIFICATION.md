@@ -8,7 +8,7 @@ The model only selects tools and supplies data; it cannot grant permissions, cho
 
 ## Modes
 
-- Default `offline_commands`: explicit slash commands with JSON arguments. This is a deterministic command parser, not natural-language AI.
+- Default `offline_commands`: explicit slash commands/JSON plus a bounded set of read aliases and typed shortcuts (`/add title | SKU | NGN 5000.00`, `/caption SKU`, `sales today`). This is a deterministic parser, not unrestricted natural-language AI. Relative dates use the stored merchant timezone.
 - Optional `openai_responses`: Responses API function selection from the same strict tool registry. Set COMMERCEPILOT_PLANNER=openai, COMMERCEPILOT_MODEL to an account-supported model, and OPENAI_API_KEY through the shell/secret manager. There is no hardcoded model, included credential or live-provider verification. Startup fails if configuration is incomplete. Do not silently fall back after a model error.
 - Extensions implement AgentPlanner.propose(message, context), expose a mode string and return only `{tool, arguments}`. The older integrations.Planner protocol describes the initial generic port; the agent runtime uses AgentPlanner.
 
@@ -25,6 +25,9 @@ Official implementation references: https://developers.openai.com/api/docs/guide
 | expense_capture | economics.expense.capture | economics | Record unreconciled merchant-reported cost with source |
 | expenses_list | economics.expense.read | economics | List separate currency-preserving records |
 | report_calculate | economics.calculate | economics | Exact explicitly supplied aggregates; unknowns retained |
+| daily_report | sales.report.daily | economics | Source-linked timezone/currency daily calculations |
+| forecast_prepare | sales.report.daily | economics | History gates, evaluated statistical baselines and descriptive scenarios |
+| plan_variance | sales.report.daily | economics | Compare exact plan targets with recorded actuals; preserve unknowns |
 | external_request | external action policy | unavailable | Refund/delete escalated; publish/sync remain blocked |
 | clarify | no mutation | none | Ask for missing facts |
 
@@ -36,11 +39,11 @@ Business profiles, conversations, user/assistant messages, runs and expenses use
 
 Run states: planning, completed, clarification, blocked, failed. A process crash before commit leaves planning with no local tool effects. Inspect GET /v1/agent/runs and cancel abandoned planning runs using POST /v1/agent/runs/{id}/cancel. A late planner rechecks state and cannot execute after cancellation. Cancellation cannot reverse an already committed action or undo provider token usage. New intent uses a new idempotency key.
 
-Planning and local execution remain synchronous for direct agent API calls. Version 0.3 additionally routes signed WhatsApp text through a durable inbox and a separate leased worker; see WHATSAPP.md. This is one tool per turn, not autonomous multi-step chaining. External task execution remains in the separate backend task subsystem. Background social scheduling and live WhatsApp sending are pending.
+Planning and local execution remain synchronous for direct API calls. WhatsApp routes signed text through a durable inbox and leased worker; the integrated runtime also drains eligible authorized replies and records delivery evidence. This remains one tool per turn, not multi-step chaining. Attachments use a trusted quarantine handler, never caption-driven tool execution. External task execution stays in the separate subsystem; social scheduling remains incomplete.
 
 ## Integrity and limits
 
-Every expense preserves raw message/validated arguments through its run, normalized UTC occurrence, recording timestamp, currency/minor amount, source/evidence ID, merchant-reported verification and unreconciled status. Confidence is unknown rather than invented. Duplicate message delivery cannot duplicate the expense; separately worded duplicate receipts are not yet detected. There is no imported order ledger, source reconciliation, receipt OCR or authoritative profitability report yet.
+Every expense preserves raw message/validated arguments through its run, normalized UTC occurrence, recording timestamp, currency/minor amount, source/evidence ID, merchant-reported verification and unreconciled status. Confidence is unknown rather than invented. Duplicate message delivery cannot duplicate an expense; separately worded duplicate receipts are not yet detected. Imported order/expense revisions and daily ledger reporting are implemented; independent provider reconciliation and receipt interpretation remain incomplete.
 
 Caption drafts show Nigerian naira prices with two decimal places. Other currencies retain their source values in the catalogue, but caption prices are omitted until a supported currency-scale registry is added. No exchange conversion occurs.
 

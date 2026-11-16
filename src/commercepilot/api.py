@@ -14,17 +14,18 @@ from commercepilot.planners import configured_planner
 from commercepilot.whatsapp import WhatsApp, WebhookError, MAX_BODY_BYTES
 from commercepilot.business_api import business_router
 from commercepilot.delivery import Delivery, configured_sender
+from commercepilot.media import configured_media
 
 
 def create_app(db_path: str | None = None, adapters=None, planner=None,
                whatsapp_secret=None, whatsapp_verify_token=None, clock=None, sender=None) -> FastAPI:
     service = Services(Database(db_path or os.getenv("COMMERCEPILOT_DB", "commercepilot.db")), adapters)
-    app = FastAPI(title="CommercePilot AI", version="0.4.0")
+    app = FastAPI(title="CommercePilot AI", version="0.5.0")
     app.state.services = service
     agent = Agent(service, planner if planner is not None else configured_planner())
     app.state.agent = agent
     whatsapp = WhatsApp(service, agent, whatsapp_secret or os.getenv("WHATSAPP_APP_SECRET"),
-                        whatsapp_verify_token or os.getenv("WHATSAPP_VERIFY_TOKEN"), clock)
+                        whatsapp_verify_token or os.getenv("WHATSAPP_VERIFY_TOKEN"), clock, configured_media())
     app.state.whatsapp = whatsapp
     delivery = Delivery(service, sender if sender is not None else configured_sender(), clock)
     app.state.delivery = delivery
@@ -70,7 +71,16 @@ def create_app(db_path: str | None = None, adapters=None, planner=None,
 
     @app.get("/health", tags=["operations"])
     def health():
-        return {"status": "ok", "version": "0.4.0"}
+        return {"status": "ok", "version": "0.5.0"}
+
+    @app.get("/v1/runtime", tags=["operations"])
+    def runtime_status(user=Depends(owner)):
+        return {"planner": agent.planner.mode,
+                "whatsapp_signature_configured": bool(whatsapp._secret),
+                "whatsapp_verification_configured": bool(whatsapp._verify_token),
+                "whatsapp_sender_configured": delivery.sender is not None,
+                "whatsapp_media_configured": whatsapp.media_loader is not None,
+                "account_validation": "Configuration alone does not prove provider access or app publication."}
 
     @app.post("/v1/products", status_code=201, tags=["catalogue"])
     def create_product(data: ProductInput, user=Depends(owner)):

@@ -4,6 +4,7 @@ from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic import Field, StrictInt, field_validator
 from commercepilot.domain import Command, FinancialInput, ProductInput
+from commercepilot.analytics import ForecastInput
 
 
 class MessageInput(Command):
@@ -64,6 +65,10 @@ class ExternalInput(Command):
     product_id: str = Field(min_length=1, max_length=100)
 
 
+class PlanReferenceInput(Command):
+    plan_id: str = Field(min_length=1, max_length=100)
+
+
 # Tool registry is static trusted code. Extra arguments (tenant IDs, SQL, URLs,
 # permissions) are rejected before execution. All tool arguments are facts/data.
 TOOL_SCHEMAS = {
@@ -75,6 +80,8 @@ TOOL_SCHEMAS = {
     "expenses_list": EmptyInput,
     "report_calculate": FinancialInput,
     "daily_report": DailySalesInput,
+    "forecast_prepare": ForecastInput,
+    "plan_variance": PlanReferenceInput,
     "external_request": ExternalInput,
     "clarify": ClarifyInput,
 }

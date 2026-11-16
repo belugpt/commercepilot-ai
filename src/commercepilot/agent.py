@@ -1,7 +1,8 @@
 """Persistent one-tool agent turns with validation, policy and atomic local effects."""
 import json
 import sqlite3
-from datetime import timezone
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from uuid import uuid4
 from pydantic import ValidationError
 from commercepilot.agent_schema import TOOL_SCHEMAS, ProfileInput
@@ -16,12 +17,14 @@ TOOL_ACTIONS = {
     "expense_capture": Action.EXPENSE, "expenses_list": Action.READ_EXPENSES,
     "report_calculate": Action.CALCULATE,
     "daily_report": Action.SALES_REPORT,
+    "forecast_prepare": Action.SALES_REPORT, "plan_variance": Action.SALES_REPORT,
 }
 TOOL_CAPABILITIES = {
     "product_create": "catalogue", "catalogue_list": "catalogue",
     "caption_prepare": "content", "expense_capture": "economics",
     "expenses_list": "economics", "report_calculate": "economics",
     "daily_report": "economics",
+    "forecast_prepare": "economics", "plan_variance": "economics",
 }
 
 
@@ -47,7 +50,9 @@ class Agent:
             profile = c.execute("SELECT body FROM business_profiles WHERE merchant_id=?", (merchant,)).fetchone()
             products = c.execute("SELECT id,body FROM products WHERE merchant_id=? ORDER BY id LIMIT 50", (merchant,)).fetchall()
             history = c.execute("SELECT role,body FROM messages WHERE merchant_id=? AND conversation_id=? ORDER BY id DESC LIMIT 6", (merchant, conversation)).fetchall()
-        return {"profile": json.loads(profile["body"]) if profile else None,
+        details = json.loads(profile["body"]) if profile else None
+        return {"profile": details,
+                "today": datetime.now(ZoneInfo(details["timezone"])).date().isoformat() if details else None,
                 "products": [{"id": p["id"], **json.loads(p["body"])} for p in products],
                 "recent_messages": [{"role": r["role"], "body": r["body"][:2000]} for r in reversed(history)]}
 
@@ -212,4 +217,10 @@ class Agent:
             from commercepilot.business import Business
             return "completed", {"message": "Daily report prepared from recorded source data. Review missing fields and coverage before using profit figures.",
                                  "report": Business(self.services).daily(merchant, args.day, args.currency)}
+        if tool == "forecast_prepare":
+            from commercepilot.analytics import Analytics
+            return "completed", {"message": "Statistical forecast evaluated against recorded history; review data gaps and assumptions.", "forecast": Analytics(self.services).forecast(merchant, args)}
+        if tool == "plan_variance":
+            from commercepilot.analytics import Analytics
+            return "completed", {"message": "Plan variance calculated from recorded data; unknown values remain unknown.", "variance": Analytics(self.services).variance(merchant, args.plan_id)}
         raise ValueError("unsupported tool")

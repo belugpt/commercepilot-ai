@@ -1,0 +1,16 @@
+.git
+.venv
+.local
+.env
+.env.*
+*.db
+*.db-*
+*.dpapi
+*.key
+__pycache__
+.pytest_cache
+tests
+examples
+dist
+build
+*.egg-info

@@ -1,4 +1,4 @@
-"""Signed WhatsApp intake and durable local processing. No outbound transport."""
+"""Signed WhatsApp intake and durable local processing; delivery is a separate worker."""
 import hashlib
 import hmac
 import json
@@ -23,6 +23,13 @@ class Text(BaseModel):
     body: str = Field(min_length=1, max_length=8000, pattern=r"\S")
 
 
+class Attachment(BaseModel):
+    id: str = Field(pattern=r"^[0-9]{1,100}$")
+    mime_type: str | None = Field(default=None,max_length=100)
+    sha256: str | None = Field(default=None,max_length=100)
+    caption: str | None = Field(default=None,max_length=8000)
+
+
 class Incoming(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     id: str = Field(min_length=1, max_length=512)
@@ -31,6 +38,10 @@ class Incoming(BaseModel):
     timestamp: str = Field(pattern=r"^\d{1,12}$")
     type: str = Field(min_length=1, max_length=50)
     text: Text | None = None
+    image: Attachment | None = None
+    document: Attachment | None = None
+    audio: Attachment | None = None
+    video: Attachment | None = None
 
     def sender_keys(self):
         keys = []
@@ -42,10 +53,11 @@ class Incoming(BaseModel):
 
 
 class WhatsApp:
-    def __init__(self, services, agent, app_secret=None, verify_token=None, clock=None):
+    def __init__(self, services, agent, app_secret=None, verify_token=None, clock=None, media_loader=None):
         self.services, self.db, self.agent = services, services.db, agent
         self._secret, self._verify_token = app_secret, verify_token
         self.clock = clock or time.time
+        self.media_loader = media_loader
 
     def verify_subscription(self, mode, token, challenge):
         if not self._verify_token:
@@ -169,7 +181,9 @@ class WhatsApp:
                     continue
                 binding = candidates[0]
                 merchant = binding["merchant_id"]
-                body = message.model_dump_json(by_alias=True)
+                # Preserve pre-media normalized text hashes across upgrades.
+                absent_media={name for name in {'image','document','audio','video'} if getattr(message,name) is None}
+                body = message.model_dump_json(by_alias=True,exclude=absent_media)
                 old = c.execute("SELECT id,merchant_id,payload_hash FROM whatsapp_inbox WHERE waba_id=? AND phone_number_id=? AND provider_message_id=?", (waba_id, phone_id, message.id)).fetchone()
                 if old:
                     if old["payload_hash"] != digest(body):
@@ -181,7 +195,7 @@ class WhatsApp:
                 reason = None
                 if not message.sender_keys():
                     reason = "unsupported_sender_identity"
-                elif message.type != "text":
+                elif message.type != "text" and not (self.media_loader and message.type in {'image','document','audio','video'} and getattr(message,message.type,None)):
                     reason = "unsupported_message_type"
                 elif not self.clock() - MAX_EVENT_AGE <= int(message.timestamp) <= self.clock() + 300:
                     reason = "message_timestamp_outside_admission_window"
@@ -252,8 +266,12 @@ class WhatsApp:
                 self._retry({**item, "attempts": MAX_ATTEMPTS}, "binding_revoked_or_lease_lost")
                 return {"id": item["id"], "state": "dead"}
             message = Incoming.model_validate_json(item["body"])
-            run = self.agent.turn(item["merchant_id"], item["conversation_id"], "whatsapp:" + item["id"], message.text.body,
-                                  execution_guard=lambda c: self._guard(c, item))
+            if message.type == 'text':
+                run = self.agent.turn(item["merchant_id"], item["conversation_id"], "whatsapp:" + item["id"], message.text.body,
+                                      execution_guard=lambda c: self._guard(c, item))
+            else:
+                from commercepilot.media import capture
+                run = capture(self,item,message)
             with self.db.connect() as c:
                 c.execute("UPDATE whatsapp_inbox SET run_id=? WHERE id=? AND lease_token=?", (run["id"], item["id"], item["lease_token"]))
             if run["state"] == "planning":
@@ -286,4 +304,34 @@ class WhatsApp:
             text += "\n" + result["product"]["title"] + " (" + result["product"]["sku"] + ")"
         elif result.get("products"):
             text += "\n" + "\n".join(p["title"] + " (" + p["sku"] + ")" for p in result["products"][:20])
+        elif result.get("report"):
+            report = result["report"]
+            def amount(value):
+                if value is None:
+                    return "Unknown"
+                currency = report.get("currency", "")
+                if currency == "NGN":
+                    major, minor = divmod(abs(value), 100)
+                    return f"NGN {'-' if value < 0 else ''}{major:,}.{minor:02d}"
+                return f"{value} minor units ({currency})"
+            text += "\n" + str(report.get("day", "Supplied aggregates"))
+            for key, label in [("net_sales_minor", "Net sales"), ("cash_after_refunds_minor", "Cash after refunds"), ("gross_profit_minor", "Gross profit"), ("operating_profit_minor", "Operating profit")]:
+                text += "\n" + label + ": " + amount(report.get(key))
+            if report.get("missing"):
+                text += "\nMissing: " + ", ".join(report["missing"])
+        elif result.get("expenses"):
+            text += "\n" + "\n".join(f"{e['category']}: {e['amount_minor']} minor units ({e['currency']})" for e in result["expenses"][:20])
+        elif result.get("forecast"):
+            forecast=result["forecast"]
+            text += "\nState: " + forecast["state"]
+            if forecast["state"]=="insufficient_history":
+                text += "\n" + forecast["required"]
+            else:
+                text += "\nMethod: " + forecast["method"]
+                text += "\n" + "\n".join(f"{p['day']}: {p['base_minor']} minor units ({forecast['currency']})" for p in forecast["daily"])
+                text += "\nEstimate only; scenarios and assumptions are available in the dashboard."
+        elif result.get("variance"):
+            variance=result["variance"]
+            text += f"\nRevenue variance: {variance['revenue_variance_minor']} minor units\nExpense variance: {variance['expense_variance_minor']} minor units"
+            text = text.replace('None minor units','Unknown')
         return text[:3500]

@@ -1,6 +1,9 @@
 """Planning is replaceable and cannot execute tools or grant permissions."""
 import json
 import os
+import re
+from datetime import date, timedelta
+from decimal import Decimal
 from typing import Protocol
 from urllib.request import Request, urlopen
 from commercepilot.agent_schema import TOOL_SCHEMAS
@@ -27,14 +30,39 @@ class CommandPlanner:
         "/expense": "expense_capture", "/expenses": "expenses_list",
         "/calculate": "report_calculate", "/external": "external_request",
         "/sales": "daily_report",
+        "/forecast": "forecast_prepare", "/variance": "plan_variance",
     }
 
     def propose(self, message, context):
+        normalized = message.strip().lower().rstrip('.!?')
+        aliases = {"products":"/products", "show my products":"/products", "list products":"/products", "expenses":"/expenses", "show my expenses":"/expenses"}
+        message = aliases.get(normalized, message)
+        if normalized in {"sales today", "today's sales", "today’s sales", "sales yesterday"}:
+            profile, today = context.get("profile"), context.get("today")
+            if not profile or not today:
+                return {"tool":"clarify","arguments":{"question":"Set up your business profile and timezone before requesting a daily report."}}
+            day = date.fromisoformat(today)-timedelta(days=1 if normalized=="sales yesterday" else 0)
+            return {"tool":"daily_report","arguments":{"day":day.isoformat(),"currency":profile["currency"]}}
+        if message.strip().startswith('/add '):
+            parts = [x.strip() for x in message.strip()[5:].split('|')]
+            if len(parts)==3:
+                match=re.fullmatch(r'(NGN|USD|EUR|GBP|KES|GHS) ([0-9]+(?:\.[0-9]{1,2})?)',parts[2])
+                if match:
+                    amount=int(Decimal(match[2])*100)
+                    return {"tool":"product_create","arguments":{"title":parts[0],"sku":parts[1],"currency":match[1],"price_minor":amount}}
+            return {"tool":"clarify","arguments":{"question":"Use /add Product title | YOUR-SKU | NGN 5000.00. Include the actual SKU and price."}}
         command, _, arguments = message.strip().partition(" ")
         tool = self.commands.get(command)
         if not tool:
             return {"tool": "clarify", "arguments": {"question":
-                "Offline mode accepts /profile, /product, /products, /caption, /expense, /expenses or /calculate followed by JSON fields. Natural-language planning needs an AI connection."}}
+                "Account-free commands: /products, /expenses, sales today, /add Product title | SKU | NGN 5000.00, /caption SKU. Also /profile, /expense, /sales, /forecast or /calculate with JSON. Open-ended requests need an AI connection."}}
+        if tool == "daily_report" and not arguments.strip() and context.get("profile") and context.get("today"):
+            return {"tool":tool,"arguments":{"day":context["today"],"currency":context["profile"]["currency"]}}
+        if tool == "caption_prepare" and arguments.strip() and not arguments.strip().startswith('{'):
+            matches = [p for p in context.get("products",[]) if p["sku"]==arguments.strip()]
+            if len(matches)==1:
+                return {"tool":tool,"arguments":{"product_id":matches[0]["id"]}}
+            return {"tool":"clarify","arguments":{"question":"That SKU is not in the available catalogue context. Send its product ID as JSON or choose a listed SKU."}}
         try:
             data = json.loads(arguments) if arguments.strip() else {}
         except (ValueError, TypeError):

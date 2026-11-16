@@ -1,6 +1,6 @@
 # Integration evidence — 2026-11-16
 
-No provider accounts or credentials exist yet. No live provider requests or writes have been tested.
+The owner has a Meta Business account and a test WhatsApp account. Live backend phone authentication, Hello World sending/receipt and signed inbound → automatic reply → delivered-status processing were validated in 0.5. Credentials are protected locally outside Git. Commerce/social/model accounts are not connected. Test-account validation is not production or third-party merchant access approval.
 
 ## Bumpa
 

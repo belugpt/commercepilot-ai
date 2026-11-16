@@ -1,5 +1,15 @@
 # Implementation status
 
+## 0.5 — live WhatsApp runtime and analytics, 2026-11-16
+
+The owner's Meta test credentials were refreshed/validated and stored outside Git using Windows user-scoped DPAPI. User approved a temporary webhook-only Cloudflare HTTPS tunnel and registration/subscription in Meta. Callback challenge was accepted, `messages` subscribed and the app separately subscribed to the test WABA. A backend Hello World template was received by the user. The user then sent actual WhatsApp commands: signed inbound events persisted, workers created agent results/reply drafts, automatic text submissions succeeded, and signed provider callbacks advanced replies to delivered. This is live test-account validation, not production certification. The runtime/tunnel must stay running; test token expiry and changing tunnel URLs require maintenance.
+
+Added integrated private-dashboard/webhook/worker runtime, CLI readiness and protected-secret setup, opt-in attachment retrieval/quarantine with source links, simpler deterministic commands, exact daily reply rendering, statistical sales forecasts with history gates/holdout baseline evaluation and actual-versus-plan variance. Belu's user-supplied clothing-business profile is saved locally. No model API account exists, so open-ended model chat/OCR/transcription are not live configured. New installs remain provider-disabled. Container/Compose deployment preparation is included but Docker is unavailable locally and was not run.
+
+Verification: 81 regression tests passed on Python 3.15, plus 2 callback-renewal tests. Coverage includes gateway exposure, DPAPI encryption, reply-drain authorization, command precision, history/forecast gates, variance, media hashes/hosts, caption injection, replay compatibility and revocation during download. The separate-process HTTP smoke test passed after migration 006. One upstream Starlette/httpx warning remains.
+
+Operational follow-up: the initial temporary tunnel was lost after a network interruption and its hostname expired. A replacement webhook-only tunnel was created successfully. Meta then returned OAuth code 190/subcode 463 for the temporary account token; browser control was unavailable, so callback renewal/token refresh requires reconnection. Prior live delivery evidence is persisted, but it must not be presented as proof of current availability. See docs/OPERATIONS.md and docs/REQUIREMENTS_MATRIX.md for limits and unfinished master-spec requirements. Earlier milestones are historical.
+
 ## 0.4 — merchant workspace and business ledger, 2026-11-16
 
 Implemented a responsive local dashboard for reports, agent chat, catalogue, canonical order imports, expenses/coverage, plans, quarantined files, runs/audit and autonomy settings. Added append-only source revisions/conflict detection, timezone/currency-separated daily calculations with unknown-value gates, immutable exact-hash plan approval, and tenant-protected quarantine storage. Added opt-in text reply transport, claimed submission records and signed delivery-status reconciliation; ambiguous sends are never replayed automatically. Migrations 004/005 upgrade existing stores.

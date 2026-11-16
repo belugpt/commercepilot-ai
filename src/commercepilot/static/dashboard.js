@@ -8,6 +8,7 @@
     'economics.expense.capture':'Capture expenses', 'economics.expense.read':'Read expenses',
     'economics.calculate':'Calculate supplied aggregates', 'sales.report.daily':'Prepare daily sales reports',
     'whatsapp.reply.send':'Send WhatsApp replies (requires server configuration)',
+    'media.capture':'Capture WhatsApp attachments into quarantine',
     'content.describe':'Prepare product descriptions'
   };
   const labels = {overview:'Overview',agent:'AI assistant',catalogue:'Catalogue',sales:'Sales & orders',expenses:'Expenses',plans:'Plans & budgets',media:'Documents & media',activity:'Activity',settings:'Workspace settings'};
@@ -25,6 +26,7 @@
   function localInputDate(d){const x=new Date(d.getTime()-d.getTimezoneOffset()*60000);return x.toISOString().slice(0,16);}
   function money(value,currency='NGN'){
     if(value===null||value===undefined)return 'Unknown';
+    if(!Number.isSafeInteger(value))return 'View exact amount in API report';
     // Supported display scales are explicit; never guess for arbitrary currencies.
     if(!['NGN','USD','EUR','GBP','KES','GHS'].includes(currency))return `${value.toLocaleString()} minor units (${currency})`;
     return new Intl.NumberFormat('en-NG',{style:'currency',currency,maximumFractionDigits:2}).format(value/100);
@@ -51,7 +53,7 @@
     table('catalogue-table',merchant.products.map(p=>[p.title,p.sku,money(p.price_minor,p.currency)]));
     if(merchant.policy){$('automation-enabled').checked=merchant.policy.enabled;document.querySelectorAll('#action-checks input').forEach(c=>c.checked=merchant.policy.actions.includes(c.value));$('policy-expiry').value=localInputDate(new Date(merchant.policy.expires_at));}
     if(merchant.profile){const f=$('profile-form');['business_name','sector','currency','timezone'].forEach(k=>f.elements[k].value=merchant.profile[k]);['catalogue','content','economics'].forEach(k=>f.elements[k].checked=merchant.profile.capabilities.includes(k));}
-    const jobs=[loadReport(),loadOrders(),loadExpenses(),loadPlans(),loadMedia(),loadActivity(),loadProviders()];
+    const jobs=[loadReport(),loadOrders(),loadExpenses(),loadPlans(),loadMedia(),loadActivity(),loadProviders(),loadWhatsApp()];
     const results=await Promise.allSettled(jobs);const failed=results.filter(r=>r.status==='rejected');
     if(failed.length)notice(failed.map(r=>r.reason.message).join(' · '),true);
   }
@@ -103,4 +105,20 @@
   $('new-conversation').addEventListener('click',()=>run(async()=>{conversation=(await api('/v1/conversations',{method:'POST'})).id;$('chat-log').replaceChildren(node('div','A new conversation is ready.','chat-message assistant'));}));
   document.querySelectorAll('[data-prompt]').forEach(b=>b.addEventListener('click',()=>{$('chat-input').value=b.dataset.prompt;$('chat-input').focus();}));
   $('sales-prompt').addEventListener('click',()=>{$('chat-input').value='/sales '+JSON.stringify({day:$('report-day').value,currency:$('report-currency').value});$('chat-input').focus();});
+  const activityPanel=document.querySelector('[data-panel="activity"]');
+  const whatsappCard=node('article',undefined,'card'),whatsappList=node('div');
+  whatsappCard.append(node('h2','WhatsApp replies'),node('p','Drafts and provider delivery evidence are separate. Uncertain submissions are held for review.','muted'),whatsappList);activityPanel.append(whatsappCard);
+  async function loadWhatsApp(){
+    const [drafts,deliveries,runtime]=await Promise.all([api('/v1/whatsapp/outbox'),api('/v1/whatsapp/deliveries'),api('/v1/runtime')]);
+    whatsappList.replaceChildren(node('p',`Planner: ${runtime.planner} · Signed intake: ${runtime.whatsapp_signature_configured?'configured':'needs app secret'} · Sending: ${runtime.whatsapp_sender_configured?'configured':'disabled'}`,'muted'));
+    drafts.forEach(d=>{const sent=deliveries.find(x=>x.outbox_id===d.id),row=node('div',undefined,'record'),detail=node('div');detail.append(node('strong',sent?sent.state:'Draft'),node('p',d.body));if(sent?.reason)detail.append(node('small',sent.reason));row.append(detail);if(!sent){const button=node('button','Send reply','quiet-button');button.disabled=!runtime.whatsapp_sender_configured;button.addEventListener('click',()=>run(async()=>{button.disabled=true;const result=await api(`/v1/whatsapp/outbox/${d.id}/send`,{method:'POST'});notice(`Reply state: ${result.state}`);await loadWhatsApp();}));row.append(button);}whatsappList.append(row);});
+    if(!drafts.length)whatsappList.append(node('p','No reply drafts yet.','muted'));
+  }
+  const planPanel=document.querySelector('[data-panel="plans"]'),forecastCard=node('article',undefined,'card');
+  const forecastForm=node('form'),forecastGrid=node('div',undefined,'form-grid'),forecastOutput=node('pre');
+  const forecastFields={};
+  [['ends_on','History ends on','date',$('report-day').value],['currency','Currency','text','NGN'],['horizon_days','Forecast days (1–30)','number','7']].forEach(([name,label,type,value])=>{const wrapper=node('label',label),input=document.createElement('input');input.name=name;input.type=type;input.value=value;input.required=true;if(type==='number'){input.min='1';input.max='30';}forecastFields[name]=input;wrapper.append(input);forecastGrid.append(wrapper);});
+  const forecastButton=node('button','Evaluate forecast','primary');forecastButton.type='submit';forecastForm.append(forecastGrid,forecastButton);
+  forecastForm.addEventListener('submit',e=>{e.preventDefault();run(async()=>{forecastButton.disabled=true;try{const result=await api('/v1/forecasts',{method:'POST',body:{ends_on:forecastFields.ends_on.value,currency:forecastFields.currency.value.toUpperCase(),horizon_days:Number(forecastFields.horizon_days.value)}});forecastOutput.textContent=JSON.stringify(result,null,2);}finally{forecastButton.disabled=false;}});});
+  forecastCard.append(node('h2','Forecast recorded sales'),node('p','Requires 28 consecutive days with order history. Compares weekly and mean baselines on a 7-day holdout; scenarios describe observed error, without a guarantee.','muted'),forecastForm,forecastOutput);planPanel.append(forecastCard);
 })();
