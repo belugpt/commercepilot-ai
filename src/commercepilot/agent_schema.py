@@ -1,5 +1,5 @@
 """Bounded agent tool schemas; models never supply identity or permissions."""
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic import Field, StrictInt, field_validator
@@ -54,6 +54,11 @@ class ClarifyInput(Command):
     question: str = Field(min_length=1, max_length=500)
 
 
+class DailySalesInput(Command):
+    day: date
+    currency: str = Field(pattern=r"^[A-Z]{3}$")
+
+
 class ExternalInput(Command):
     action: Literal["social.publish", "catalogue.sync", "payments.refund", "catalogue.delete"]
     product_id: str = Field(min_length=1, max_length=100)
@@ -69,6 +74,7 @@ TOOL_SCHEMAS = {
     "expense_capture": ExpenseInput,
     "expenses_list": EmptyInput,
     "report_calculate": FinancialInput,
+    "daily_report": DailySalesInput,
     "external_request": ExternalInput,
     "clarify": ClarifyInput,
 }

@@ -12,18 +12,22 @@ from commercepilot.agent import Agent
 from commercepilot.agent_schema import MessageInput
 from commercepilot.planners import configured_planner
 from commercepilot.whatsapp import WhatsApp, WebhookError, MAX_BODY_BYTES
+from commercepilot.business_api import business_router
+from commercepilot.delivery import Delivery, configured_sender
 
 
 def create_app(db_path: str | None = None, adapters=None, planner=None,
-               whatsapp_secret=None, whatsapp_verify_token=None, clock=None) -> FastAPI:
+               whatsapp_secret=None, whatsapp_verify_token=None, clock=None, sender=None) -> FastAPI:
     service = Services(Database(db_path or os.getenv("COMMERCEPILOT_DB", "commercepilot.db")), adapters)
-    app = FastAPI(title="CommercePilot AI", version="0.3.0")
+    app = FastAPI(title="CommercePilot AI", version="0.4.0")
     app.state.services = service
     agent = Agent(service, planner if planner is not None else configured_planner())
     app.state.agent = agent
     whatsapp = WhatsApp(service, agent, whatsapp_secret or os.getenv("WHATSAPP_APP_SECRET"),
                         whatsapp_verify_token or os.getenv("WHATSAPP_VERIFY_TOKEN"), clock)
     app.state.whatsapp = whatsapp
+    delivery = Delivery(service, sender if sender is not None else configured_sender(), clock)
+    app.state.delivery = delivery
     security = HTTPBearer(auto_error=False)
 
     def identity(credentials: HTTPAuthorizationCredentials | None = Depends(security)):
@@ -66,7 +70,7 @@ def create_app(db_path: str | None = None, adapters=None, planner=None,
 
     @app.get("/health", tags=["operations"])
     def health():
-        return {"status": "ok", "version": "0.3.0"}
+        return {"status": "ok", "version": "0.4.0"}
 
     @app.post("/v1/products", status_code=201, tags=["catalogue"])
     def create_product(data: ProductInput, user=Depends(owner)):
@@ -141,6 +145,8 @@ def create_app(db_path: str | None = None, adapters=None, planner=None,
 
     @app.get("/v1/whatsapp/{collection}", tags=["whatsapp"])
     def whatsapp_records(collection: str, user=Depends(owner)):
+        if collection == "deliveries":
+            return delivery.records(user["merchant_id"])
         if collection not in {"bindings", "inbox", "outbox", "conflicts"}:
             raise HTTPException(404, "collection not found")
         return whatsapp.list_records(user["merchant_id"], collection)
@@ -153,4 +159,9 @@ def create_app(db_path: str | None = None, adapters=None, planner=None,
     def retry_whatsapp(inbox_id: str, user=Depends(owner)):
         return whatsapp.requeue(user["merchant_id"], inbox_id)
 
+    @app.post("/v1/whatsapp/outbox/{outbox_id}/send", tags=["whatsapp"])
+    def send_reply(outbox_id: str, user=Depends(owner)):
+        return delivery.send(user["merchant_id"],outbox_id)
+
+    app.include_router(business_router(service, owner, identity))
     return app

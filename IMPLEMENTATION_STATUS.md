@@ -1,5 +1,13 @@
 # Implementation status
 
+## 0.4 — merchant workspace and business ledger, 2026-11-16
+
+Implemented a responsive local dashboard for reports, agent chat, catalogue, canonical order imports, expenses/coverage, plans, quarantined files, runs/audit and autonomy settings. Added append-only source revisions/conflict detection, timezone/currency-separated daily calculations with unknown-value gates, immutable exact-hash plan approval, and tenant-protected quarantine storage. Added opt-in text reply transport, claimed submission records and signed delivery-status reconciliation; ambiguous sends are never replayed automatically. Migrations 004/005 upgrade existing stores.
+
+Verification: 66 tests passed on Python 3.15, including concurrent reply submission, early/out-of-order/wrong-recipient status callbacks, disabled/expired/revoked channels, uncertain outcomes, source corrections/conflicts, financial missing values, tenant isolation, plan approval and upload boundaries. Browser verified connected sample records, correct sales/profit/unknown operating profit, navigation and an agent catalogue response. A labelled temporary demo is runnable with examples/dashboard_demo.py. One upstream Starlette/httpx warning remains.
+
+Still incomplete: provider-backed catalogue/order connectors, live backend WhatsApp send/inbound validation and public HTTPS deployment, receipt OCR/scanning, forecasts, multi-step autonomous scheduling, production identity/PostgreSQL/RLS/secret management and the remaining full product spec. No live credentials were added. Local sending remains disabled by default. Earlier milestone entries below describe their historical scope.
+
 ## Local connection validation — 2026-11-16
 
 User confirmed receipt of the Meta dashboard Hello World test at their verified recipient number. Test-account token authorization and recipient verification were completed through Meta. This validates the Meta dashboard send path, not the CommercePilot backend. No provider tokens have been committed to this repository.

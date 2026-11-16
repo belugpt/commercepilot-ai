@@ -113,6 +113,7 @@ class WhatsApp:
             if payload["object"] != "whatsapp_business_account":
                 raise ValueError("unsupported object")
             events = []
+            statuses = []
             for entry in payload["entry"]:
                 waba_id = entry["id"]
                 if not isinstance(waba_id, str) or not re.fullmatch(r"[0-9]{1,100}", waba_id):
@@ -133,11 +134,29 @@ class WhatsApp:
                         events.append((waba_id, phone_id, incoming))
                         if len(events) > 100:
                             raise ValueError("batch too large")
+                    for status in value.get("statuses", []):
+                        if not isinstance(status,dict) or not isinstance(status.get("id"),str) or len(status["id"])>512 or status.get("status") not in {"sent","delivered","read","failed"}:
+                            raise ValueError("invalid delivery status")
+                        if not isinstance(status.get("recipient_id"),str) or not re.fullmatch(r"[0-9]{5,20}",status["recipient_id"]):
+                            # Status-only notifications without a phone recipient
+                            # are not sufficient proof for this phone-only sender.
+                            continue
+                        statuses.append((waba_id,phone_id,status))
+                        if len(statuses)>100:
+                            raise ValueError("status batch too large")
         except (ValueError, TypeError, KeyError, AttributeError, ValidationError, RecursionError):
             raise WebhookError(422, "invalid_webhook_payload") from None
         counts = {"accepted": 0, "duplicates": 0, "ignored": 0, "conflicts": 0}
         with self.db.connect() as c:
             c.execute("BEGIN IMMEDIATE")
+            from commercepilot.delivery import Delivery
+            for waba_id,phone_id,status in statuses:
+                # Do not retain statuses for accounts this host does not map.
+                if not c.execute("SELECT 1 FROM whatsapp_bindings WHERE waba_id=? AND phone_number_id=?",(waba_id,phone_id)).fetchone():
+                    continue
+                body=json.dumps(status,sort_keys=True)
+                c.execute("INSERT OR IGNORE INTO whatsapp_status_receipts VALUES(?,?,?,?,?,?,?)",(digest(waba_id+":"+phone_id+":"+body),waba_id,phone_id,status["id"],status["status"],body,now()))
+                Delivery.reconcile(c,status["id"])
             for waba_id, phone_id, message in events:
                 candidates = []
                 for sender in message.sender_keys():

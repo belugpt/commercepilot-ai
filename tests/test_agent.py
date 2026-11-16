@@ -148,7 +148,7 @@ def test_migration_from_foundation_preserves_data(tmp_path):
     Database(path)
     with sqlite3.connect(path) as conn:
         assert conn.execute("SELECT name FROM merchants WHERE id='old'").fetchone()[0] == "Old shop"
-        assert conn.execute("SELECT MAX(version) FROM schema_versions").fetchone()[0] == 3
+        assert conn.execute("SELECT MAX(version) FROM schema_versions").fetchone()[0] == 5
 
 
 def test_openai_contract_no_live_request():

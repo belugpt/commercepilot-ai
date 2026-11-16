@@ -15,11 +15,13 @@ TOOL_ACTIONS = {
     "catalogue_list": Action.READ_CATALOGUE, "caption_prepare": Action.CAPTION,
     "expense_capture": Action.EXPENSE, "expenses_list": Action.READ_EXPENSES,
     "report_calculate": Action.CALCULATE,
+    "daily_report": Action.SALES_REPORT,
 }
 TOOL_CAPABILITIES = {
     "product_create": "catalogue", "catalogue_list": "catalogue",
     "caption_prepare": "content", "expense_capture": "economics",
     "expenses_list": "economics", "report_calculate": "economics",
+    "daily_report": "economics",
 }
 
 
@@ -206,4 +208,8 @@ class Agent:
             return "completed", {"message": "Expense records retrieved (up to 100); no currencies have been combined.", "expenses": [{"id": r["id"], **json.loads(r["body"])} for r in rows]}
         if tool == "report_calculate":
             return "completed", {"message": "Calculated from supplied aggregates; missing costs remain unknown. These inputs have not been reconciled with orders.", "report": financial_report(args)}
+        if tool == "daily_report":
+            from commercepilot.business import Business
+            return "completed", {"message": "Daily report prepared from recorded source data. Review missing fields and coverage before using profit figures.",
+                                 "report": Business(self.services).daily(merchant, args.day, args.currency)}
         raise ValueError("unsupported tool")

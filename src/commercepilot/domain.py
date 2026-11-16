@@ -12,6 +12,8 @@ class Action(StrEnum):
     EXPENSE = "economics.expense.capture"
     READ_EXPENSES = "economics.expense.read"
     CALCULATE = "economics.calculate"
+    SALES_REPORT = "sales.report.daily"
+    REPLY = "whatsapp.reply.send"
     DESCRIBE = "content.describe"
     PUBLISH = "social.publish"
     SYNC = "catalogue.sync"

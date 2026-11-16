@@ -15,7 +15,7 @@ python -m venv .venv
 .venv\Scripts\python -m uvicorn commercepilot.api:create_app --factory --host 127.0.0.1
 ```
 
-The CLI prints a bearer key once. Store it securely; use `Authorization: Bearer <key>` in the interactive API documentation at http://127.0.0.1:8000/docs. The database defaults to commercepilot.db; set COMMERCEPILOT_DB to change it. Revoke keys with `python -m commercepilot.cli revoke-key`. Keep the server on loopback until the production security gates are complete.
+The CLI prints a bearer key once. Open http://127.0.0.1:8000/ and connect the merchant dashboard with that key. API documentation is at http://127.0.0.1:8000/docs. The database defaults to commercepilot.db; set COMMERCEPILOT_DB to change it. Revoke keys with `python -m commercepilot.cli revoke-key`. Keep the server on loopback until the production security gates are complete.
 
 ```powershell
 .venv\Scripts\python -m pytest -q
@@ -33,6 +33,8 @@ The CLI prints a bearer key once. Store it securely; use `Authorization: Bearer 
 Publishing, syncing, refunds and deletion are deliberately blocked until their required approval/rule implementations exist. The default application contains no executing adapter. Successful test adapters are fixtures only.
 
 ## Build on it
+
+Version 0.4 adds a [merchant dashboard and business ledger](docs/BUSINESS_WORKSPACE.md): revisioned order/expense imports, timezone-aware daily reports, completeness gates, budget drafts and exact-plan approval, quarantined uploads and opt-in WhatsApp text delivery with signed status reconciliation. Sending remains disabled by default and has not been live-account verified. For a temporary sample dashboard run `python examples/dashboard_demo.py` and use the key printed by the demo at http://127.0.0.1:8001.
 
 For a real local HTTP and separate-worker smoke test, follow [Local webhook test](docs/LOCAL_TEST.md) or run `python examples/local_webhook_test.py`. It uses temporary data and never contacts Meta.
 

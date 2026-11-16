@@ -26,6 +26,7 @@ class CommandPlanner:
         "/products": "catalogue_list", "/caption": "caption_prepare",
         "/expense": "expense_capture", "/expenses": "expenses_list",
         "/calculate": "report_calculate", "/external": "external_request",
+        "/sales": "daily_report",
     }
 
     def propose(self, message, context):

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "commercepilot-ai"
-version = "0.3.0"
+version = "0.4.0"
 description = "Extensible WhatsApp-first commerce operations backend"
 requires-python = ">=3.11"
 license = "MIT"
@@ -20,7 +20,7 @@ commercepilot = "commercepilot.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-commercepilot = ["sql/*.sql"]
+commercepilot = ["sql/*.sql", "static/*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
