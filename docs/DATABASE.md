@@ -1,6 +1,6 @@
 # Database
 
-Local schema version 1 lives in database.py and is snapshotted in migrations/001_initial.sql. Startup applies only this initial idempotent schema; future changes require explicit incremental migrations and upgrade tests. SQLite foreign keys are enabled per connection; transactions roll back on failure.
+Local schema version 1 lives in database.py and is snapshotted in migrations/001_initial.sql. Migration 002 adds business_profiles, conversations, agent_runs, messages and expenses. The bundled SQL resource is applied transactionally once, tracked by schema_versions; upgrade tests preserve version-1 merchants and verify repeat startup. SQLite foreign keys are enabled per connection; transactions roll back on failure. Keep migrations/002_agent.sql and the packaged src/commercepilot/sql/002_agent.sql synchronized.
 
 Tables: merchants; api_keys (SHA-256 digest of high-entropy random key, tenant, role, revoked); products (tenant, SKU, validated JSON); policies (tenant, version, JSON); tasks (tenant/key uniqueness, payload hash, validated command, constrained state, evidence, UTC timestamp); audit (tenant/event/object/time); exceptions (composite tenant/task foreign key).
 

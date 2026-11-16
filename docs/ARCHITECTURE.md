@@ -32,6 +32,11 @@ flowchart LR
 | database | Connection lifecycle, local schema and constraints |
 | integrations | Provider execution/read-back and planner contracts |
 | cli | Operator-controlled tenant/key provisioning and revocation |
+| agent | Persistent message/run lifecycle and atomic local tool orchestration |
+| agent_schema | Strict allowlisted profile/catalogue/expense/report tool inputs |
+| planners | Explicit offline commands and optional model function-call selection |
+
+Version 0.2 implements merchant context, profile/capability storage, conversations/messages, source-linked expenses and one-tool agent turns. Model planning runs outside the transaction; execution rechecks current policy, capability and cancellation state inside the transaction. See AI_AGENT_SPECIFICATION.md for implemented behavior and limits.
 
 ## Execution guarantees and limits
 

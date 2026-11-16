@@ -12,6 +12,8 @@ The existing protocol is synchronous. Async or long-running adapters should be i
 
 ## Add a planner
 
+The implemented agent uses planners.AgentPlanner.propose(message, context) and the static TOOL_SCHEMAS registry in agent_schema.py. Inject with create_app(planner=implementation); return exactly `{tool, arguments}`. Host code validates schemas and enforces grants/capabilities before execution. See AI_AGENT_SPECIFICATION.md. The original integrations.Planner protocol remains a generic early contract and is not the runtime interface.
+
 Implement Planner.propose using only approved merchant facts. Validate output with TaskInput.model_validate; resolve identity from the authenticated service, and submit through Services. Never pass database handles, API keys, arbitrary shell tools or authorization decisions to the model. Treat documents, descriptions and inbound messages as untrusted data.
 
 ## Add a module

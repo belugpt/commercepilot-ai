@@ -5,6 +5,13 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
 
 class Action(StrEnum):
+    PROFILE = "merchant.profile.update"
+    CREATE_PRODUCT = "catalogue.create"
+    READ_CATALOGUE = "catalogue.read"
+    CAPTION = "content.caption"
+    EXPENSE = "economics.expense.capture"
+    READ_EXPENSES = "economics.expense.read"
+    CALCULATE = "economics.calculate"
     DESCRIBE = "content.describe"
     PUBLISH = "social.publish"
     SYNC = "catalogue.sync"

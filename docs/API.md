@@ -18,4 +18,8 @@ Run the app and inspect /docs or /openapi.json. Generated OpenAPI is the authori
 
 Product body: title, sku, price_minor (nonnegative integer), currency (uppercase three-letter code). Currency format is validated; supported-currency/scale registry is pending. Task body: action and product_id. Policy body: enabled, actions and timezone-aware expires_at. No API accepts merchant_id overrides. Financial endpoint accepts one currency per report, no conversions. Net sales excludes discounts; refunds are a separate deduction. Cash is separately supplied and never inferred.
 
+## Agent routes (0.2)
+
+All require owner access. POST /v1/conversations creates a tenant-bound conversation. POST /v1/conversations/{id}/messages accepts `{message}` plus Idempotency-Key and returns a persisted agent run. GET on the same messages path returns up to 200 messages. GET /v1/agent/runs lists up to 100 recent runs, GET /v1/agent/runs/{id} reads one, and POST /v1/agent/runs/{id}/cancel fails an abandoned planning run without executing its tool. Current processing is synchronous. See AI_AGENT_SPECIFICATION.md for grants, capabilities, modes and recovery limits.
+
 Production registration/OIDC, key rotation API, collection pagination, webhook ingestion, scheduling and worker endpoints are pending. API docs are not an assertion of full MVP completion.

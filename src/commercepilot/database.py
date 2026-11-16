@@ -1,5 +1,6 @@
 """Local transactional storage. Production PostgreSQL/RLS is a separate gate."""
 import sqlite3
+from importlib.resources import files
 from contextlib import contextmanager
 
 SCHEMA = """
@@ -35,6 +36,9 @@ class Database:
         self.path = path
         with self.connect() as conn:
             conn.executescript(SCHEMA)
+            if not conn.execute("SELECT 1 FROM schema_versions WHERE version=2").fetchone():
+                migration = files("commercepilot").joinpath("sql/002_agent.sql").read_text(encoding="utf-8")
+                conn.executescript("BEGIN IMMEDIATE;\n" + migration + "\nCOMMIT;")
 
     @contextmanager
     def connect(self):

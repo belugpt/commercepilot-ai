@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0 — 2026-11-16
+- Added persistent agent turns, profile/capability context, policy-checked validated tools and source-linked expenses.
+- Added optional Responses function-call planning and explicit offline command mode.
+- Added idempotent conversation delivery, atomic tool effects, cancellation/recovery, migration 002 and adversarial/end-to-end tests.
+- Added a runnable offline merchant example and agent setup documentation.
+
 ## 0.1.0 — 2026-11-16
 - Created MIT-licensed extensible backend foundation, API, tenant/auth/policy/task/finance modules and tests.
 - Documented architecture, canonical data direction, provider evidence, extension contracts and production gates.
