@@ -1,0 +1,9 @@
+# Database
+
+Local schema version 1 lives in database.py and is snapshotted in migrations/001_initial.sql. Startup applies only this initial idempotent schema; future changes require explicit incremental migrations and upgrade tests. SQLite foreign keys are enabled per connection; transactions roll back on failure.
+
+Tables: merchants; api_keys (SHA-256 digest of high-entropy random key, tenant, role, revoked); products (tenant, SKU, validated JSON); policies (tenant, version, JSON); tasks (tenant/key uniqueness, payload hash, validated command, constrained state, evidence, UTC timestamp); audit (tenant/event/object/time); exceptions (composite tenant/task foreign key).
+
+Products and tasks carry composite tenant/object uniqueness. Queries filter on authenticated merchant. No global object read API exists. Tenant-scoped repository tests cover leakage. Local SQLite is a development store, without production row security, encryption, retention, leased jobs or distributed scaling guarantees.
+
+Planned production schema follows master-spec section 10: memberships/capabilities, canonical variants/media/inventory, channel mappings, orders/items/payments/refunds, conversations/messages, posts/schedules/results, task steps/runs/approvals, provenance-rich financial records/costs/allocations/receipts, quality issues, versioned plans and forecasts. All child relationships include merchant_id; imported records use tenant/provider/source uniqueness; financial corrections append adjustments. Original source values, verification/confidence, evidence, actor and UTC occurrence/recording timestamps remain traceable. Currency mixing and unknown-as-zero are prohibited.
