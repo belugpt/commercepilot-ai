@@ -1,5 +1,9 @@
 # Changelog
 
+## Local smoke-test addition — 2026-11-16
+- Added real loopback HTTP testing with a separate CLI worker, temporary data, signed intake, replay/tamper checks and product read-back.
+- Added the smoke test to the Python CI matrix and documented the distinction between Meta dashboard testing and backend connection validation.
+
 ## 0.3.0 — 2026-11-16
 - Added signed WhatsApp subscription/intake contracts with bounded parsing, sender bindings and phone/BSUID routing.
 - Added durable inbox, conversation-ordered leased worker, replay/conflict detection, audited retries/dead letters and draft-only outbox.

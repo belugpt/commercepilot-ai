@@ -34,6 +34,8 @@ Publishing, syncing, refunds and deletion are deliberately blocked until their r
 
 ## Build on it
 
+For a real local HTTP and separate-worker smoke test, follow [Local webhook test](docs/LOCAL_TEST.md) or run `python examples/local_webhook_test.py`. It uses temporary data and never contacts Meta.
+
 Version 0.3 adds [signed WhatsApp text intake and a durable worker](docs/WHATSAPP.md), explicit merchant sender bindings, leased claims/recovery, duplicate/conflict handling, dead letters and reply drafts. Live Meta access is unverified and outgoing messages remain disabled. Try `python examples/whatsapp_inbox.py` after installation for a network-free signed-intake demonstration.
 
 Version 0.2 adds persistent agent conversations, merchant profiles/capabilities, validated policy-checked tools, expense provenance and optional Responses API planning. Start with [Try the agent](docs/TRY_THE_AGENT.md) and [the agent specification](docs/AI_AGENT_SPECIFICATION.md). Offline command mode works without accounts; live model planning is opt-in and not yet account-tested.

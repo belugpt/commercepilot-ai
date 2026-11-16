@@ -1,5 +1,11 @@
 # Implementation status
 
+## Local connection validation — 2026-11-16
+
+User confirmed receipt of the Meta dashboard Hello World test at their verified recipient number. Test-account token authorization and recipient verification were completed through Meta. This validates the Meta dashboard send path, not the CommercePilot backend. No provider tokens have been committed to this repository.
+
+User selected a local test before hosting. The actual loopback HTTP + separate CLI-worker smoke test passed locally: subscription challenge, signed onboarding/product creation, duplicate rejection, altered-signature denial, product read-back and two persisted reply drafts. Ephemeral secrets/data were used, the server shut down cleanly and no Meta calls or WhatsApp sends occurred. The smoke test is included in CI. Hosting, public HTTPS callback registration and backend live inbound verification remain pending. Outbound backend replies remain drafts.
+
 ## 0.3 — WhatsApp intake and worker, 2026-11-16
 
 Implemented signed webhook verification/intake, raw-body and batch limits, explicit operator-attested WABA/number/sender mapping, phone and business-scoped sender IDs, persistent conversations, transactional inbox/replay dedup/conflict records, leased worker with conversation ordering, bounded retries/dead letters, owner recovery/revocation/inspection and draft-only reply outbox. Agent execution rechecks channel binding and worker lease. Migration 003 upgrades existing databases. CLI and signed offline demonstration are documented in docs/WHATSAPP.md.
