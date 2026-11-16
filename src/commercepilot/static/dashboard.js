@@ -31,6 +31,8 @@
     if(!['NGN','USD','EUR','GBP','KES','GHS'].includes(currency))return `${value.toLocaleString()} minor units (${currency})`;
     return new Intl.NumberFormat('en-NG',{style:'currency',currency,maximumFractionDigits:2}).format(value/100);
   }
+  function productPrice(p){const s=p.catalogue;if(!s)return money(p.price_minor,p.currency);return s.price_min_minor===s.price_max_minor?money(s.price_min_minor,p.currency):`${money(s.price_min_minor,p.currency)} – ${money(s.price_max_minor,p.currency)}`;}
+  function productCell(p){const root=node('div');root.append(node('strong',p.title));if(p.catalogue){const b=node('button','View imported details','quiet-button');b.addEventListener('click',()=>showImportedProduct(p));root.append(node('br'),b);}return root;}
   function table(id,rows,empty='No records yet.'){
     const body=$(id);body.replaceChildren();
     if(!rows.length){const tr=node('tr'),td=node('td',empty,'empty-cell');td.colSpan=10;tr.append(td);body.append(tr);return;}
@@ -50,7 +52,7 @@
     $('business-name').textContent=merchant.name;$('connection-label').textContent=merchant.role+' access';
     $('connection-pill').textContent='● Connected';$('connection-pill').classList.add('connected');$('connect-panel').hidden=true;
     $('product-count').textContent=merchant.products.length+' records';
-    table('catalogue-table',merchant.products.map(p=>[p.title,p.sku,money(p.price_minor,p.currency)]));
+    table('catalogue-table',merchant.products.map(p=>[productCell(p),p.sku,productPrice(p)]));
     if(merchant.policy){$('automation-enabled').checked=merchant.policy.enabled;document.querySelectorAll('#action-checks input').forEach(c=>c.checked=merchant.policy.actions.includes(c.value));$('policy-expiry').value=localInputDate(new Date(merchant.policy.expires_at));}
     if(merchant.profile){const f=$('profile-form');['business_name','sector','currency','timezone'].forEach(k=>f.elements[k].value=merchant.profile[k]);['catalogue','content','economics'].forEach(k=>f.elements[k].checked=merchant.profile.capabilities.includes(k));}
     const jobs=[loadReport(),loadOrders(),loadExpenses(),loadPlans(),loadMedia(),loadActivity(),loadProviders(),loadWhatsApp()];
@@ -121,4 +123,12 @@
   const forecastButton=node('button','Evaluate forecast','primary');forecastButton.type='submit';forecastForm.append(forecastGrid,forecastButton);
   forecastForm.addEventListener('submit',e=>{e.preventDefault();run(async()=>{forecastButton.disabled=true;try{const result=await api('/v1/forecasts',{method:'POST',body:{ends_on:forecastFields.ends_on.value,currency:forecastFields.currency.value.toUpperCase(),horizon_days:Number(forecastFields.horizon_days.value)}});forecastOutput.textContent=JSON.stringify(result,null,2);}finally{forecastButton.disabled=false;}});});
   forecastCard.append(node('h2','Forecast recorded sales'),node('p','Requires 28 consecutive days with order history. Compares weekly and mean baselines on a 7-day holdout; scenarios describe observed error, without a guarantee.','muted'),forecastForm,forecastOutput);planPanel.append(forecastCard);
+  const importedDetails=node('article',undefined,'card');importedDetails.hidden=true;document.querySelector('[data-panel="catalogue"]').append(importedDetails);
+  function showImportedProduct(p){
+    const source=p.catalogue;importedDetails.hidden=false;importedDetails.replaceChildren(node('h2',p.title),node('p',productPrice(p)),node('p',`Source: ${source.store_name} · ${source.sku_generated?'Internal SKU generated from source ID':'Merchant SKU preserved'} · Observed ${new Date(source.observed_at).toLocaleString()}`,'muted'));
+    const link=node('a','Open source product page','inline-link');link.href=source.source_url;link.target='_blank';link.rel='noopener noreferrer';importedDetails.append(link,node('p',source.description));
+    source.options.forEach(o=>importedDetails.append(node('p',`${o.name}: ${o.values.join(' · ')}`)));
+    importedDetails.append(node('p',`${source.declared_variant_count} variations declared by the source. Individual variant prices and stock have not been imported.`,'muted'));
+    const images=node('div',undefined,'prompt-chips');source.image_urls.forEach((url,i)=>{const a=node('a',`Image ${i+1}`,'inline-link');a.href=url;a.target='_blank';a.rel='noopener noreferrer';images.append(a);});importedDetails.append(images);importedDetails.scrollIntoView({block:'start',behavior:'smooth'});
+  }
 })();

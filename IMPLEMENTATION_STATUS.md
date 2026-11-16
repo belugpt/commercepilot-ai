@@ -1,5 +1,11 @@
 # Implementation status
 
+## 0.6 — authorized storefront catalogue import, 2026-11-17
+
+User explicitly authorized scraping their public Bumpa storefront for import into Belu. Crawling rules allowed access. Fifty products were discovered across all three visible catalogue pages and all 50 product-page reads validated successfully. Public effective minimum prices matched product JSON-LD, including sale prices whose parent discount flag was inconsistent. The exact preview was committed atomically: 50 new records, 380 image links, 12 price ranges and 50 explicitly labelled generated internal SKUs because no source SKUs were published. Distinct IDs sharing a title were preserved. Source descriptions/options/URLs/timestamps and declared variation counts are retained; individual variant combinations/prices/stock and unpublished products were not imported.
+
+Added migration 007, preview/commit owner APIs, source-aware product reads, range-aware factual captions and dashboard imported-detail views. Full regression suite: 88 tests passed on Python 3.15, including atomicity, duplicate/conflict protection, exact prices, source scope and tenant boundaries. Browser verification showed the actual 50 records and the imported range/options/image links. Private source data, backup and catalogue export are outside Git. See docs/CATALOGUE_IMPORT.md for contracts and limitations.
+
 ## 0.5 — live WhatsApp runtime and analytics, 2026-11-16
 
 The owner's Meta test credentials were refreshed/validated and stored outside Git using Windows user-scoped DPAPI. User approved a temporary webhook-only Cloudflare HTTPS tunnel and registration/subscription in Meta. Callback challenge was accepted, `messages` subscribed and the app separately subscribed to the test WABA. A backend Hello World template was received by the user. The user then sent actual WhatsApp commands: signed inbound events persisted, workers created agent results/reply drafts, automatic text submissions succeeded, and signed provider callbacks advanced replies to delivered. This is live test-account validation, not production certification. The runtime/tunnel must stay running; test token expiry and changing tunnel URLs require maintenance.

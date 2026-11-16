@@ -304,6 +304,7 @@ class WhatsApp:
             text += "\n" + result["product"]["title"] + " (" + result["product"]["sku"] + ")"
         elif "products" in result:
             text += "\n" + ("\n".join(p["title"] + " (" + p["sku"] + ")" for p in result["products"][:20]) or "No products yet. Use /add Product title | SKU | NGN 5000.00 with your actual product details.")
+            if len(result['products'])>20:text+=f"\nShowing 20 of {len(result['products'])} retrieved records. Open the dashboard for the full catalogue."
         elif result.get("report"):
             report = result["report"]
             def amount(value):

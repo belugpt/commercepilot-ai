@@ -20,7 +20,7 @@ from commercepilot.media import configured_media
 def create_app(db_path: str | None = None, adapters=None, planner=None,
                whatsapp_secret=None, whatsapp_verify_token=None, clock=None, sender=None) -> FastAPI:
     service = Services(Database(db_path or os.getenv("COMMERCEPILOT_DB", "commercepilot.db")), adapters)
-    app = FastAPI(title="CommercePilot AI", version="0.5.0")
+    app = FastAPI(title="CommercePilot AI", version="0.6.0")
     app.state.services = service
     agent = Agent(service, planner if planner is not None else configured_planner())
     app.state.agent = agent
@@ -71,7 +71,7 @@ def create_app(db_path: str | None = None, adapters=None, planner=None,
 
     @app.get("/health", tags=["operations"])
     def health():
-        return {"status": "ok", "version": "0.5.0"}
+        return {"status": "ok", "version": "0.6.0"}
 
     @app.get("/v1/runtime", tags=["operations"])
     def runtime_status(user=Depends(owner)):

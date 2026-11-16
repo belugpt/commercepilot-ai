@@ -48,12 +48,12 @@ class Agent:
         with self.db.connect() as c:
             self.require_conversation(c, merchant, conversation)
             profile = c.execute("SELECT body FROM business_profiles WHERE merchant_id=?", (merchant,)).fetchone()
-            products = c.execute("SELECT id,body FROM products WHERE merchant_id=? ORDER BY id LIMIT 50", (merchant,)).fetchall()
+            products = self.services.catalogue_rows(c,merchant,50)
             history = c.execute("SELECT role,body FROM messages WHERE merchant_id=? AND conversation_id=? ORDER BY id DESC LIMIT 6", (merchant, conversation)).fetchall()
         details = json.loads(profile["body"]) if profile else None
         return {"profile": details,
                 "today": datetime.now(ZoneInfo(details["timezone"])).date().isoformat() if details else None,
-                "products": [{"id": p["id"], **json.loads(p["body"])} for p in products],
+                "products": [{k:v for k,v in p.items() if k!='catalogue'} | ({'catalogue':{k:p['catalogue'][k] for k in ['price_min_minor','price_max_minor','source_url']}} if p.get('catalogue') else {}) for p in products],
                 "recent_messages": [{"role": r["role"], "body": r["body"][:2000]} for r in reversed(history)]}
 
     def history(self, merchant, conversation):
@@ -182,20 +182,28 @@ class Agent:
             row = c.execute("SELECT body FROM products WHERE merchant_id=? AND id=?", (merchant, product_id)).fetchone()
             return "completed", {"message": "Product created in your catalogue.", "product": {"id": product_id, **json.loads(row["body"])}}
         if tool == "catalogue_list":
-            rows = c.execute("SELECT id,body FROM products WHERE merchant_id=? ORDER BY id LIMIT 100", (merchant,)).fetchall()
-            return "completed", {"message": "Catalogue records retrieved (up to 100).", "products": [{"id": r["id"], **json.loads(r["body"])} for r in rows]}
+            rows = self.services.catalogue_rows(c,merchant,100)
+            return "completed", {"message": "Catalogue records retrieved (up to 100).", "products": rows}
         if tool == "caption_prepare":
-            row = c.execute("SELECT body FROM products WHERE merchant_id=? AND id=?", (merchant, args.product_id)).fetchone()
-            if not row:
+            rows = self.services.catalogue_rows(c,merchant,1,product_id=args.product_id)
+            if not rows:
                 raise Missing("product not found")
-            p = json.loads(row["body"])
+            p = rows[0]
             # Deliberately use a factual template, not free model claims or guessed availability.
             caption = f"{p['title']}\nSKU: {p['sku']}"
             # Initial market is Nigeria. Other currency scales require an explicit
             # registry; omit their price rather than guessing a display amount.
             if p["currency"] == "NGN":
-                naira, kobo = divmod(p["price_minor"], 100)
-                caption += f"\nNGN {naira:,}.{kobo:02d}"
+                low=p.get('catalogue',{}).get('price_min_minor',p['price_minor'])
+                high=p.get('catalogue',{}).get('price_max_minor',p['price_minor'])
+                if low is not None:
+                    naira, kobo = divmod(low, 100)
+                    caption += f"\nNGN {naira:,}.{kobo:02d}"
+                    if high!=low:
+                        naira,kobo=divmod(high,100)
+                        caption += f" – NGN {naira:,}.{kobo:02d} (depends on option)"
+                if p.get('catalogue'):
+                    caption+='\nPublic storefront price snapshot; confirm current price and availability.'
             return "completed", {"message": "A factual caption draft is ready. It has not been published.", "caption": caption,
                                  "source_product_id": args.product_id, "generation_method": "verified_catalogue_template"}
         if tool == "expense_capture":

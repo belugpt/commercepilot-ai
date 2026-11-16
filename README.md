@@ -34,6 +34,8 @@ Publishing, syncing, refunds and deletion are deliberately blocked until their r
 
 ## Build on it
 
+Version 0.6 adds [authorized public storefront catalogue imports](docs/CATALOGUE_IMPORT.md), with source-preserving previews, atomic/idempotent commit, generated-SKU labels, price-range support and imported details in the dashboard. A live authorized 50-product storefront import was completed locally. This is a snapshot import; merchant API synchronization and individual variant stock/prices remain separate capabilities.
+
 Version 0.5 adds [the integrated runtime and operations guide](docs/OPERATIONS.md): a private dashboard, isolated public-webhook listener, automatic reply drain, Windows-encrypted local settings, source-linked WhatsApp attachment quarantine, statistical sales forecasts/backtesting, plan variance and easier account-free commands. Live test-account text receive → worker → automatic reply → signed delivered callback was verified. The owner's local runtime is separate from this credential-free public repository. See [the completion matrix](docs/REQUIREMENTS_MATRIX.md) for remaining full-spec gates.
 
 Version 0.4 adds a [merchant dashboard and business ledger](docs/BUSINESS_WORKSPACE.md): revisioned order/expense imports, timezone-aware daily reports, completeness gates, budget drafts and exact-plan approval, quarantined uploads and opt-in WhatsApp text delivery with signed status reconciliation. Sending remains disabled by default and has not been live-account verified. For a temporary sample dashboard run `python examples/dashboard_demo.py` and use the key printed by the demo at http://127.0.0.1:8001.

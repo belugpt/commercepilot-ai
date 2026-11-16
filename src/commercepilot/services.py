@@ -62,10 +62,17 @@ class Services:
 
     def product(self, merchant, product_id):
         with self.db.connect() as c:
-            row = c.execute("SELECT body FROM products WHERE merchant_id=? AND id=?", (merchant, product_id)).fetchone()
-        if not row:
+            rows = self.catalogue_rows(c,merchant,1,product_id=product_id)
+        if not rows:
             raise Missing("product not found")
-        return {"id": product_id, **json.loads(row["body"])}
+        return rows[0]
+
+    @staticmethod
+    def catalogue_rows(c,merchant,limit=200,product_id=None):
+        where=' AND p.id=?' if product_id else ''
+        args=(merchant,product_id,limit) if product_id else (merchant,limit)
+        rows=c.execute('SELECT p.id,p.body,s.body AS source_body FROM products p LEFT JOIN catalogue_sources s ON s.merchant_id=p.merchant_id AND s.product_id=p.id WHERE p.merchant_id=?'+where+' ORDER BY p.sku LIMIT ?',args).fetchall()
+        return [{'id':r['id'],**json.loads(r['body']),**({'catalogue':json.loads(r['source_body'])} if r['source_body'] else {})} for r in rows]
 
     def policy(self, merchant, data: PolicyInput):
         if data.expires_at.tzinfo is None:

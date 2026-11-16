@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "commercepilot-ai"
-version = "0.5.0"
+version = "0.6.0"
 description = "Extensible WhatsApp-first commerce operations backend"
 requires-python = ">=3.11"
 license = "MIT"

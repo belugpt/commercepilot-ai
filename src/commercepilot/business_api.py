@@ -8,12 +8,26 @@ from fastapi.responses import HTMLResponse, Response
 from commercepilot.business import Business, OrderInput, FinancialRecordInput, CoverageInput, PlanInput, ApprovePlanInput
 from commercepilot.services import now
 from commercepilot.analytics import Analytics, ForecastInput
+from commercepilot.catalogue_import import CatalogueImport, ScrapedCatalogue
 
 
 def business_router(services, owner, identity):
     router = APIRouter()
     business = Business(services)
     analytics = Analytics(services)
+    imports = CatalogueImport(services)
+
+    @router.post('/v1/catalogue/imports',tags=['catalogue'])
+    def preview_catalogue(data:ScrapedCatalogue,user=Depends(owner)):
+        return imports.prepare(user['merchant_id'],data)
+
+    @router.get('/v1/catalogue/imports/{batch_id}',tags=['catalogue'])
+    def catalogue_import(batch_id:str,user=Depends(owner)):
+        return imports.inspect(user['merchant_id'],batch_id)
+
+    @router.post('/v1/catalogue/imports/{batch_id}/commit',tags=['catalogue'])
+    def commit_catalogue(batch_id:str,data:ApprovePlanInput,user=Depends(owner)):
+        return imports.commit(user['merchant_id'],batch_id,data.payload_hash)
 
     @router.post("/v1/forecasts", tags=["planning"])
     def forecast(data: ForecastInput, user=Depends(identity)):
@@ -46,13 +60,13 @@ def business_router(services, owner, identity):
         with services.db.connect() as c:
             merchant = c.execute("SELECT name FROM merchants WHERE id=?", (user["merchant_id"],)).fetchone()
             policy = c.execute("SELECT version,body FROM policies WHERE merchant_id=?", (user["merchant_id"],)).fetchone()
-            products = c.execute("SELECT id,body FROM products WHERE merchant_id=? ORDER BY sku LIMIT 200", (user["merchant_id"],)).fetchall()
+            products = services.catalogue_rows(c,user['merchant_id'],200)
             profile = c.execute("SELECT body FROM business_profiles WHERE merchant_id=?", (user["merchant_id"],)).fetchone()
         import json
         return {"merchant_id": user["merchant_id"], "name": merchant["name"], "role": user["role"],
                 "profile": json.loads(profile["body"]) if profile else None,
                 "policy": {"version": policy["version"], **json.loads(policy["body"])} if policy else None,
-                "products": [{"id": p["id"], **json.loads(p["body"])} for p in products]}
+                "products": products}
 
     @router.post("/v1/orders/ingest", tags=["sales"])
     def ingest_order(data: OrderInput, user=Depends(owner)):
