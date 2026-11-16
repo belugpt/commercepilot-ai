@@ -36,4 +36,4 @@ Publishing, syncing, refunds and deletion are deliberately blocked until their r
 
 Read [architecture](docs/ARCHITECTURE.md), [extension guide](docs/EXTENDING.md), [API guide](docs/API.md), [database design](docs/DATABASE.md), [integration evidence](docs/INTEGRATIONS.md), [roadmap](docs/ROADMAP.md), [status](IMPLEMENTATION_STATUS.md), [contribution guide](CONTRIBUTING.md) and [security](SECURITY.md). The original [master specification](docs/MASTER_PRODUCT_SPECIFICATION.md) remains authoritative.
 
-Proposed GitHub location: belugpt/commercepilot-ai. See implementation status for actual publication state.
+Public repository: https://github.com/belugpt/commercepilot-ai.

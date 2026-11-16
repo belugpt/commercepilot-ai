@@ -1,6 +1,6 @@
 # Implementation status
 
-2026-11-16: New standalone local Git repository created, MIT license selected by user. Proposed remote belugpt/commercepilot-ai; publication not yet confirmed. Source master specification preserved under docs.
+2026-11-16: New standalone Git repository created and published publicly at https://github.com/belugpt/commercepilot-ai under the user-selected MIT license. Source master specification preserved under docs.
 
 Implemented: installable Python package, FastAPI/OpenAPI, operator provisioning, hashed revocable keys, tenant/owner boundaries, validated catalogue, versioned autonomy settings, payload-bound idempotent durable tasks, atomic claims, adapter submit/read-back separation, audit/exceptions and exact financial calculator. Integration/planner protocols and contributor/architecture/roadmap/security documents are included.
 
